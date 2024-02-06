@@ -1,0 +1,8 @@
+[package]
+name = "stripzip-rs"
+version = "0.0.1"
+authors = [ "TomaSajt" ]
+edition = "2021"
+
+[dependencies]
+zip = "0.6.6"
