@@ -1,8 +1,10 @@
 [package]
 name = "stripzip-rs"
-version = "0.0.1"
+version = "0.0.2"
 authors = [ "TomaSajt" ]
 edition = "2021"
 
 [dependencies]
+clap = { version = "4.4.18", features = ["derive"] }
+glob = "0.3.1"
 zip = "0.6.6"
