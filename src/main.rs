@@ -1,8 +1,8 @@
 use std::{
     collections::HashSet,
     fmt::Debug,
-    fs,
-    io::{self, Write},
+    fs::File,
+    io::{self, Cursor, Write},
 };
 
 use clap::Parser;
@@ -22,15 +22,15 @@ struct Cli {
 fn main() {
     let args = Cli::parse();
 
-    let in_file = fs::File::open(&args.in_path).unwrap();
+    let in_file = File::open(&args.in_path).unwrap();
     let out_buffer = process_zip(in_file, args.blacklist, args.verbose);
 
     let out_path = args.out_path.unwrap_or(args.in_path);
-    let mut out_file = fs::File::create(out_path).unwrap();
+    let mut out_file = File::create(out_path).unwrap();
     out_file.write_all(&out_buffer).unwrap();
 }
 
-fn process_zip(file: fs::File, blacklist: Option<String>, verbose: bool) -> Vec<u8> {
+fn process_zip(file: File, blacklist: Option<String>, verbose: bool) -> Vec<u8> {
     let verbose_log = |msg: String| {
         if verbose {
             println!("{}", msg);
@@ -39,18 +39,11 @@ fn process_zip(file: fs::File, blacklist: Option<String>, verbose: bool) -> Vec<
 
     let mut in_zip = zip::ZipArchive::new(file).unwrap();
 
-    let mut out_buffer = Vec::new();
-    let mut zip_writer = zip::ZipWriter::new(io::Cursor::new(&mut out_buffer));
+    let mut buffer = Vec::new();
+    let mut zip_writer = zip::ZipWriter::new(Cursor::new(&mut buffer));
 
     let zero_timestamp = zip::DateTime::default(); // 1980.01.01 00:00:00
     let mut seen_names = HashSet::new();
-
-    if verbose {
-        verbose_log(format!(
-            "stripping top-level zip comment: {}",
-            String::from_utf8(in_zip.comment().to_vec()).unwrap()
-        ));
-    }
 
     let blacklist = blacklist
         .map(|x| glob::Pattern::new(&x).unwrap())
@@ -58,12 +51,6 @@ fn process_zip(file: fs::File, blacklist: Option<String>, verbose: bool) -> Vec<
 
     for i in 0..in_zip.len() {
         let mut zip_entry = in_zip.by_index(i).unwrap();
-
-        verbose_log(format!(
-            "{} (method: {})",
-            zip_entry.name(),
-            zip_entry.compression(),
-        ));
 
         if blacklist.matches(zip_entry.name()) {
             verbose_log(format!(
@@ -82,6 +69,12 @@ fn process_zip(file: fs::File, blacklist: Option<String>, verbose: bool) -> Vec<
             continue;
         }
 
+        verbose_log(format!(
+            "Copying {} (method: {})",
+            zip_entry.name(),
+            zip_entry.compression(),
+        ));
+
         let default_perms = if zip_entry.is_dir() { 0o755 } else { 0o644 };
 
         let options = zip::write::FileOptions::default()
@@ -93,5 +86,5 @@ fn process_zip(file: fs::File, blacklist: Option<String>, verbose: bool) -> Vec<
         io::copy(&mut zip_entry, &mut zip_writer).unwrap();
     }
     drop(zip_writer);
-    return out_buffer;
+    return buffer;
 }
