@@ -1,5 +1,5 @@
 # stripzip-rs
-`stripzip-rs` is a tool which removes metadata from ZIP-like files.
+`stripzip-rs` is a tool which removes metadata and unnecessary entries from ZIP archives.
 
 Tested extensions: `.zip`, `.jar`
 
@@ -14,7 +14,12 @@ Inspired by https://github.com/KittyHawkCorp/stripzip
 
 ## Features
 - remove top-level zip comment
+- remove duplicate file entries
+  - sometimes bad `.jar` files have those
+- filter out entries with a `glob` pattern using the `--blacklist` flag
+  - example: `--blacklist "**/*.clj"` (filters out all files with the `.clj` extension)
+  - make sure to use parentheses to not allow your shell to expand it for itself
 - zero out `last_modified` timestamp of entries
-- fix unset unix permissions of entries
+- fixup unix permissions of entries
 - remove all extra fields from entries
 - remove comment from entries
